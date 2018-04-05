@@ -3,8 +3,7 @@
 
 # # Object Detection Demo
 # Welcome to the object detection inference walkthrough!
-
-
+import cv2
 import numpy as np
 import os
 import six.moves.urllib as urllib
@@ -107,6 +106,8 @@ TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(
 # Size, in inches, of the output images.
 IMAGE_SIZE = (12, 8)
 
+video_capture = cv2.VideoCapture(0)
+
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         # Definite input and output Tensors for detection_graph
@@ -118,26 +119,28 @@ with detection_graph.as_default():
         detection_scores = detection_graph.get_tensor_by_name('detection_scores:0')
         detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
         num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-        for image_path in TEST_IMAGE_PATHS:
-            image = Image.open(image_path)
-            # the array based representation of the image will be used later in order to prepare the
-            # result image with boxes and labels on it.
-            image_np = load_image_into_numpy_array(image)
+        while True:
+            ret, frame = video_capture.read()
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-            image_np_expanded = np.expand_dims(image_np, axis=0)
+            frame_expanded = np.expand_dims(frame, axis=0)
             # Actual detection.
             (boxes, scores, classes, num) = sess.run(
                 [detection_boxes, detection_scores, detection_classes, num_detections],
-                feed_dict={image_tensor: image_np_expanded})
+                feed_dict={image_tensor: frame_expanded})
             # Visualization of the results of a detection.
             vis_util.visualize_boxes_and_labels_on_image_array(
-                image_np,
+                frame,
                 np.squeeze(boxes),
                 np.squeeze(classes).astype(np.int32),
                 np.squeeze(scores),
                 category_index,
                 use_normalized_coordinates=True,
                 line_thickness=8)
-            plt.figure(figsize=IMAGE_SIZE)
-            plt.imshow(image_np)
-            plt.show()
+
+            cv2.imshow('Video', frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        video_capture.release()
+        cv2.destroyAllWindows()
